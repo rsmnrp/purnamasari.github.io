@@ -1,0 +1,1183 @@
+---
+title: "sgCarMart"
+output: html_document
+names: Gloria Goh Su Yi, Kowsalya Ganesan, Nguyen Ngoc Quynh Tram, Qistina Purnamasari, Sneha Murali
+---
+
+# Introduction
+In this project, we will be analysing the used car market dynamics in Singapore. We will be looking at the factors that affect the price of a used car and their significance.
+
+### Data Source
+We will be scraping data from sgCarMart.com, a website that has listings of new and used cars in Singapore. The data was scraped using the *rvest* and *httr* packages in R, and further manipulated using the *dplyr* and *stringr* packages. The data was scraped on 12 November 2023 and contains 23 columns and 16,393 rows.
+
+-------------START OF WEB SCRAPING----------------
+
+```{r}
+library(rvest)
+library(httr)
+
+library(stringr)
+library(dplyr)
+
+library(foreach)
+library(doParallel)
+```
+
+```{r}
+# resale_cars_df <- data.frame(
+#   header = character(0), price = numeric(0), type = character(0), features = character(0), accessories = character(0), 
+#   description = character(0), categories = character(0), mileage = numeric(0), road_tax = numeric(0), dereg_val = numeric(0),
+#   coe = character(0), engine_cap = numeric(0), curb_weight = numeric(0), manufactured_yr = numeric(0), transmission = character(0),
+#   omv = numeric(0), arf = numeric(0), power = numeric(0), num_past_owners = numeric(0), depreciation_val = numeric(0),
+#   reg_date = character(0), coe_left = character(0))
+```
+
+```{r}
+base_url <- "https://www.sgcarmart.com/used_cars/listing.php?BRSR=%d00&RPG=100&AVL=2&VEH=2"
+front <- 'https://www.sgcarmart.com/used_cars/'
+
+store_links <- function(pagenum) {
+  url <- sprintf(base_url, pagenum)
+  page<-read_html(GET(url))
+  listings <- page %>% html_nodes("table") %>% html_nodes("strong") %>% html_nodes("a")%>% html_attr("href")
+  
+  return(grep(glob2rx("info.*"), listings, value = TRUE))
+}
+```
+
+```{r}
+getHeader<- function(listing_page) {
+  header <- listing_page %>% html_nodes(".globaltitle") %>% html_text()
+  
+  if (length(header)==0) {
+    return(" ")
+  }
+  else {
+    return(header)
+  }
+}
+```
+
+```{r}
+getPrice<- function(listing_page) {
+  price <- listing_page %>% html_nodes(".font_red") %>% html_nodes("strong") %>% html_text()
+  
+  if (length(price)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[$,]", "",price)))
+  }
+}
+```
+
+```{r}
+getType<- function(detailed_info) {
+  type <- detailed_info %>% html_nodes(xpath = paste("//td[strong[contains(., 'Type of Vehicle')]]", "/..", sep = ""))%>% html_nodes("a")%>% html_text()
+  
+  if (length(type)==0) {
+    return(" ")
+  }
+  else {
+    return(type)
+  }
+}
+```
+
+```{r}
+getFeatures<- function(detailed_info) {
+  features <- detailed_info %>% html_nodes(xpath = paste("//div[strong[contains(., 'Features')]]", "/..", sep = ""))%>% html_nodes(xpath="./text()[normalize-space()]")%>% html_text(trim=TRUE)
+  
+  if (length(features)==0) {
+    return(" ")
+  }
+  else {
+    return(features)
+  }
+}
+```
+
+```{r}
+getAccessories<- function(detailed_info) {
+  accessories <- detailed_info %>% html_nodes(xpath = paste("//div[a[contains(., 'Accessories')]]", "/..", sep = ""))%>% html_nodes(xpath="./text()[normalize-space()]")%>% html_text(trim=TRUE)
+  
+  if (length(accessories)==0) {
+    return(" ")
+  }
+  else {
+    return(accessories)
+  }
+}
+```
+
+```{r}
+getDescription<- function(detailed_info) {
+  description <- detailed_info %>% html_nodes(xpath = paste("//div[strong[contains(., 'Description')]]", "/..", sep = ""))%>% html_nodes(xpath="./text()[normalize-space()]")%>% html_text(trim=TRUE)
+  
+  if (length(description)==0) {
+    return(" ")
+  }
+  else {
+    return(description)
+  }
+}
+```
+
+```{r}
+getCategories<- function(detailed_info) {
+  categories <- detailed_info %>% html_nodes(xpath = paste("//div[strong[contains(., 'Category')]]", "/..", sep = ""))%>% html_nodes("a")%>% html_text()
+  
+  if (length(categories)==0) {
+    return(" ")
+  }
+  else {
+    return(paste(categories, collapse = ', '))
+  }
+}
+```
+
+```{r}
+getMileage<- function(short_info) {
+  mileage <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][strong[contains(., 'Mileage')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(mileage)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("\\s*\\([^\\)]+\\)","",as.character(gsub("[km,]", "",mileage)))))
+  }
+}
+```
+
+```{r}
+getRoadTax<- function(short_info) {
+  road_tax <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][strong[contains(., 'Road Tax')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(road_tax)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[/ $,yr]", "",road_tax)))
+  }
+}
+```
+
+```{r}
+getDeregVal<- function(short_info) {
+  dereg_val <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][strong[contains(., 'Dereg Value')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(dereg_val)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[$as,() oftodaychange]", "",dereg_val)))
+  }
+}
+```
+
+```{r}
+getCOE<- function(short_info) {
+  coe <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][a[contains(., 'COE')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(coe)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[$,]", "",coe)))
+  }
+}
+```
+
+```{r}
+getEngineCap<- function(short_info) {
+  engine_cap <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][strong[contains(., 'Engine Cap')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(engine_cap)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[c ,]", "",engine_cap)))
+  }
+}
+```
+
+```{r}
+getCurbWeight<- function(short_info) {
+  curb_weight <- short_info%>% html_nodes(xpath = paste("//div[@class='row_title'][strong[contains(., 'Curb Weight')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(curb_weight)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[kg ,]", "",curb_weight)))
+  }
+}
+```
+
+```{r}
+getManufacturedYear<- function(short_info) {
+  manufactured_yr <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'Manufactured')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(manufactured_yr)==0) {
+    return(" ")
+  }
+  else {
+    return(manufactured_yr)
+  }
+}
+```
+
+```{r}
+getTransmission<- function(short_info) {
+  transmission <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'Transmission')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(transmission)==0) {
+    return(" ")
+  }
+  else {
+    return(transmission)
+  }
+}
+```
+
+```{r}
+getOMV<- function(short_info) {
+  omv <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'OMV')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(omv)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[$ ,]", "",omv)))
+  }
+}
+```
+
+```{r}
+getARF<- function(short_info) {
+  arf <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'ARF')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(arf)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("[$ ,]", "",arf)))
+  }
+}
+```
+
+```{r}
+getPower<- function(short_info) {
+  power <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'Power')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(power)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("\\s*\\([^\\)]+\\)","",as.character(gsub("[ kW]", "",power)))))
+  }
+}
+```
+
+```{r}
+getNumPastOwners<- function(short_info) {
+  num_past_owners <- short_info%>% html_nodes(xpath = paste("//div[strong[contains(., 'No. of Owners')]]", "/..", sep = ""))%>% html_nodes(".row_info") %>% html_text(trim=TRUE)
+  
+  if (length(num_past_owners)==0) {
+    return(" ")
+  }
+  else {
+    return(num_past_owners)
+  }
+}
+```
+
+```{r}
+getDepreciationVal<- function(listing_page) {
+  depreciation_val <- ((listing_page %>% html_nodes(".row_bg"))[[2]] %>% html_nodes("td"))[[2]]%>% html_text(trim=TRUE)
+  
+  if (length(depreciation_val)==0) {
+    return(" ")
+  }
+  else {
+    return(as.numeric(gsub("(/.*|[$, ])", "", depreciation_val)))
+  }
+}
+```
+
+```{r}
+getRegDate<- function(listing_page) {
+  reg_date <- ((listing_page %>% html_nodes(".row_bg"))[[2]] %>% html_nodes("td"))[[4]]%>% html_text(trim=TRUE)
+  
+  if (length(reg_date)==0) {
+    return(" ")
+  }
+  else {
+    return(gsub("\\s*\\([^\\)]+\\)","",reg_date))
+  }
+}
+```
+
+```{r}
+getCOELeft<- function(listing_page) {
+  coe_left <- ((listing_page %>% html_nodes(".row_bg"))[[2]] %>% html_nodes("td"))[[4]]%>% html_text(trim=TRUE)
+  
+  if (length(coe_left)==0) {
+    return(" ")
+  }
+  else {
+    return(trimws(gsub("COE left", "", gsub(".*\\((.*)\\).*", "\\1", coe_left))))
+  }
+}
+```
+
+```{r}
+get_info <- function(listing_link) {
+  listing_url <- paste0(front,listing_link) 
+  listing_page <- tryCatch(
+  {
+    read_html(GET(listing_url))  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  header <- tryCatch(
+  {
+    getHeader(listing_page)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  price <- tryCatch(
+  {
+    getPrice(listing_page)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  detailed_info <- tryCatch(
+  {
+    listing_page %>% html_nodes(".row_bg1")  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  
+  type <- tryCatch(
+  {
+    getType(detailed_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  features <- tryCatch(
+  {
+    getFeatures(detailed_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  accessories <- tryCatch(
+  {
+    getAccessories(detailed_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  description <- tryCatch(
+  {
+    getDescription(detailed_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  categories <- tryCatch(
+  {
+    getCategories(detailed_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  
+  short_info <- tryCatch(
+  {
+    listing_page %>% html_nodes("div.eachInfo")  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  mileage <- tryCatch(
+  {
+    getMileage(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  road_tax <- tryCatch(
+  {
+    getRoadTax(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  dereg_val <- tryCatch(
+  {
+    getDeregVal(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  coe <- tryCatch(
+  {
+    getCOE(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  engine_cap <- tryCatch(
+  {
+    getEngineCap(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  curb_weight <- tryCatch(
+  {
+    getCurbWeight(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  manufactured_yr <- tryCatch(
+  {
+    getManufacturedYear(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  transmission <- tryCatch(
+  {
+    getTransmission(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  omv <- tryCatch(
+  {
+    getOMV(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  arf <- tryCatch(
+  {
+    getARF(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  power <- tryCatch(
+  {
+    getPower(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  num_past_owners <- tryCatch(
+  {
+    getNumPastOwners(short_info)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  depreciation_val <- tryCatch(
+  {
+    getDepreciationVal(listing_page)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  reg_date <- tryCatch(
+  {
+    getRegDate(listing_page)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  coe_left <- tryCatch(
+  {
+    getCOELeft(listing_page)  # This will not throw an error
+  },
+  error = function() {
+    return(" ")
+  })
+  
+  new_row <- data.frame(header = header, price = price, type = type, features = features, accessories = accessories,
+                        description = description, categories = categories, mileage = mileage, road_tax = road_tax,
+                        dereg_val = dereg_val, coe = coe, engine_cap = engine_cap, curb_weight = curb_weight,
+                        manufactured_yr = manufactured_yr, transmission = transmission, omv = omv, arf = arf, power = power,
+                        num_past_owners = num_past_owners, depreciation_val = depreciation_val, reg_date = reg_date, coe_left = coe_left)
+  
+  return (new_row)
+}
+```
+
+```{r}
+scrape_data <- function(page_number) {
+  retry <- TRUE
+  
+  # Try to scrape data, with a maximum of 5 attempts
+  for (attempt in 1:5) {
+    if (!retry) break  # Exit the loop if retry is set to FALSE
+    
+    tryCatch({
+      links_on_page <- store_links(page_number)
+      car_listings <- data.frame()
+      
+      for (listing_link in links_on_page) {
+        car_listing <- get_info(listing_link)
+        car_listings <- rbind(car_listings, car_listing)
+        # Sleep for 2 seconds between requests
+        Sys.sleep(5)
+      }
+      
+      # Set retry to FALSE when there is no error
+      retry <- FALSE
+      
+      return(car_listings)
+    }, error = function(e) {
+      # Print error message
+      cat("Error on page", page_number, "attempt", attempt, ":", conditionMessage(e), "\n")
+      
+      # Sleep for 10 minutes before retrying
+      cat("Sleeping for 10 minutes before retrying...\n")
+      Sys.sleep(600)
+      
+    })
+  }
+}
+
+```
+
+```{r}
+cl <- makeCluster(detectCores()-1)
+registerDoParallel(cl)
+```
+
+```{r}
+# Execute the scraping with foreach and doParallel
+results_list <- foreach(i = 0:163, .packages = c("rvest", "httr")) %dopar% {
+  scrape_data(i)
+}
+
+# Combine the results into a single data frame
+results_df <- do.call(rbind, results_list)
+
+stopCluster(cl)
+```
+
+```{r}
+results_df
+```
+
+```{r}
+write.csv(results_df, file = "sgCarMart_scraped.csv")
+```
+
+----------------END OF WEB SCRAPING----------------
+
+
+-------------START OF DATA CLEANING----------------
+
+```{r}
+library(sparklyr)
+library(dplyr)
+```
+
+```{r}
+sc <- spark_connect(master = "local", version = "3.4.0")
+```
+
+```{r}
+# spark_home <- system("databricks-connect get-spark-home")
+# sc <- spark_connect(method = "databricks", spark_home = spark_home)
+```
+
+```{r}
+# Define your schema
+# schema <- list("INDEX" = "integer", "HEADER" = "character", "PRICE" = "double", "TYPE" = "character", "FEATURES" = "character", "ACCESSORIES" = "character", "DESCRIPTION" = "character", "CATEGORIES" = "character", "MILEAGE_KM" = "double", "ROAD_TAX" = "double", "DEREG_VAL" = "double", "COE_LISTED" = "double", "ENGINE_CAPACITY_CC" = "double", "CURB_WEIGHT_KG" = "double", "MANUFACTURED_YEAR" = "double", "TRANSMISSION" = "character", "OMV" = "double", "ARF" = "double", "POWER" = "double", "NUM_PAST_OWNERS" = "character", "DEPRE_VAL" = "double", "REG_DATE" = "character", "COE_TIME_LEFT" = "character")
+
+
+# resale_cars_df <- spark_read_csv(sc, "sgCarMart_scraped.csv", escape = "\"", name = "resale_cars", columns = schema, na.strings = c("NA","N.A.","", " "))
+
+# na_strings <- c("NA","N.A.","", " ")
+
+scraped_df <- read.csv("sgCarMart_scraped.csv", na.strings = c("NA","N.A.","", " "), col.names = c("INDEX", "HEADER", "PRICE", "TYPE", "FEATURES", "ACCESSORIES", "DESCRIPTION", "CATEGORIES", "MILEAGE_KM", "ROAD_TAX", "DEREG_VAL", "COE_LISTED", "ENGINE_CAPACITY_CC", "CURB_WEIGHT_KG", "MANUFACTURED_YEAR", "TRANSMISSION", "OMV", "ARF", "POWER", "NUM_PAST_OWNERS", "DEPRE_VAL", "REG_DATE", "COE_TIME_LEFT"))
+
+resale_cars_df <- copy_to(sc, scraped_df, overwrite=TRUE)
+
+resale_cars_df
+```
+
+
+STEP 1: REMOVE INDEX AND CATEGORIES COLUMNS
+
+```{r}
+# removing the first column as it is the index and categories column
+resale_cars_df <- resale_cars_df |> select(-1,-CATEGORIES)
+```
+
+
+STEP 2: GET BRAND AND MODEL_SUBMODEL
+
+```{r}
+resale_cars_df <- resale_cars_df |>
+  mutate(
+    BRAND = substring_index(HEADER, ' ', 1),
+    MODEL_SUBMODEL = substring_index(HEADER, '(', 1),
+    MODEL_SUBMODEL = split(MODEL_SUBMODEL, " "),
+    MODEL_SUBMODEL = concat_ws(" ", slice(MODEL_SUBMODEL,2, size(MODEL_SUBMODEL)))) |>
+  select(BRAND, MODEL_SUBMODEL, everything(), -HEADER) 
+
+resale_cars_df
+```
+
+```{r}
+resale_cars_df|>
+  distinct(BRAND)
+
+#Alfa -> Alfa Romeo, Mercedes -> Mercedes-Benz, Mini -> MINI, Land -> Land Rover, Aston -> Aston Martin, Rolls -> Rolls-Royce
+```
+
+```{r}
+resale_cars_df <- resale_cars_df |>
+  mutate(BRAND = ifelse(BRAND %in% "Mini", "MINI", BRAND)) |>
+  mutate(MODEL_SUBMODEL = ifelse(BRAND %in% c("Mercedes", "Alfa", "Land", "Rolls", "Aston"),
+                           concat_ws(" ", slice(split(MODEL_SUBMODEL, " "), 2, size(split(MODEL_SUBMODEL, " ")))), MODEL_SUBMODEL)) |>
+  mutate(BRAND = ifelse(BRAND %in% "Mercedes", "Mercedes-Benz", BRAND),
+         BRAND = ifelse(BRAND %in% "Alfa", "Alfa Romeo", BRAND),
+         BRAND = ifelse(BRAND %in% "Land", "Land Rover", BRAND),
+         BRAND = ifelse(BRAND %in% "Aston", "Aston Martin", BRAND),
+         BRAND = ifelse(BRAND %in% "Rolls", "Rolls-Royce", BRAND)
+         ) 
+```
+
+```{r}
+#checking if the brand names have been changed
+
+resale_cars_df |>
+  filter(BRAND %in% c("Mercedes", "Alfa", "Land", "Rolls", "Aston", "Mini"))
+
+resale_cars_df |>
+  filter(BRAND %in% c("Mercedes-Benz", "Alfa Romeo", "Land Rover", "Rolls-Royce", "Aston Martin", "MINI"))
+```
+
+
+STEP 3: GROUP BRANDS INTO BROADER CATEGORIES
+
+```{r}
+### GROUPING THE BRANDS INTO BROADER CATEGORIES: EXOTIC, ULTA LUX, LUX, MID-LEVEL, ECONOMY, BUDGET, OTHERS
+
+## OBTAINING A LIST OF RARE BRANDS -- 'OTHERS' 
+# Calculate the count for each brand
+brand_counts <- resale_cars_df |>
+  group_by(BRAND) |>
+  summarise(count = n())
+
+# Identify brands with count <= 5 and saving it as a vector 
+rare_brands <- brand_counts |>
+  filter(count <= 5) |>
+  select(BRAND) |>
+  collect() |>
+  pull(BRAND)
+
+## new column called new_brand to identify the groupings. so far only others. 
+resale_cars_df <- resale_cars_df |>
+  mutate(BRAND_CATEGORY = ifelse(BRAND %in% rare_brands, 'Others', BRAND))
+
+```
+
+```{r}
+# Define vectors for each category
+exotic_brands <- c("Aston Martin", "Ferrari", "Lamborghini", "McLaren")
+ultra_luxury_brands <- c("Bentley", "Land Rover", "Maserati", "Porsche", "Rolls-Royce", "Alpine")
+luxury_brands <- c("Audi", "BMW", "Jaguar", "Jeep", "Lexus", "Lotus", "Mercedes-Benz", "Volvo", "Polestar", "Tesla")
+mid_level_brands <- c("Alfa Romeo", "Infiniti", "MINI", "Opel", "Volkswagen", "BYD", "MG")
+economy_brands <- c("Chevrolet", "Citroen", "Fiat", "Ford", "Honda", "Hyundai", "Kia", "Mazda", "Mitsubishi", "Nissan", "Peugeot", "Renault", "Skoda", "Ssangyong", "Subaru", "Suzuki", "Toyota", "Smart", "SEAT", "Austin", "Morris")
+budget_brands <- c("Proton", "Perodua")
+
+# Create a new column "new_brand" based on the category
+resale_cars_df <- resale_cars_df |>
+  mutate(BRAND_CATEGORY = case_when(
+    BRAND_CATEGORY != 'Others' ~
+      case_when(
+        BRAND %in% exotic_brands ~ 'Exotic',
+        BRAND %in% ultra_luxury_brands ~ 'Ultra Luxury',
+        BRAND %in% luxury_brands ~ 'Luxury',
+        BRAND %in% mid_level_brands ~ 'Mid Level',
+        BRAND %in% economy_brands ~ 'Economy',
+        BRAND %in% budget_brands ~ 'Budget',
+        TRUE ~ 'Others'
+      ),
+    TRUE ~ 'Others'
+  ))
+
+```
+
+
+STEP 4: GET DAYS OF COE LEFT
+
+```{r}
+resale_cars_df <- resale_cars_df |>
+  mutate(
+    DAYS = as.integer(regexp_extract(COE_TIME_LEFT, "(\\\\d+)day", 1)),
+    MONTHS = as.integer(regexp_extract(COE_TIME_LEFT, "(\\\\d+)mth", 1)),
+    YEARS = as.integer(regexp_extract(COE_TIME_LEFT, "(\\\\d+)yr", 1)),
+    DAYS_OF_COE_LEFT = ifelse(isnull(DAYS),0,DAYS) + ifelse(isnull(MONTHS),0,MONTHS)*30 + ifelse(isnull(YEARS),0,YEARS)*365) |>
+  select(-DAYS,-MONTHS,-YEARS,-COE_TIME_LEFT)
+```
+
+
+STEP 5: REMOVE INVALID OUTLIERS
+
+```{r}
+resale_cars_df <- resale_cars_df |>
+  mutate(
+    MANUFACTURED_YEAR = ifelse(MANUFACTURED_YEAR >= 2023, NA, MANUFACTURED_YEAR),
+    CURB_WEIGHT_KG = ifelse(CURB_WEIGHT_KG < 100, NA, CURB_WEIGHT_KG),
+    DAYS_OF_COE_LEFT = ifelse(DAYS_OF_COE_LEFT > 3650 | DAYS_OF_COE_LEFT <= 0, NA, DAYS_OF_COE_LEFT))
+```
+
+
+STEP 6: IMPUTE NA VALUES WITH SUBMODEL-MANUFACTURING_YR GROUPED INFO WHERE AVAILABLE
+
+```{r}
+##imputing CURB_WEIGHT, ENGINE CAPACITY and POWER according to model_submodel + manufactured year 
+
+
+# Step 1: Group by MODEL_SUBMODEL and MANUFACTURED_YEAR and calculate the average values
+average_values <- resale_cars_df |>
+  group_by(MODEL_SUBMODEL, MANUFACTURED_YEAR) |>
+  summarize(
+    AVG_CURB_WEIGHT_KG = mean(CURB_WEIGHT_KG, na.rm = TRUE),
+    AVG_ENGINE_CAPACITY_CC = mean(ENGINE_CAPACITY_CC, na.rm = TRUE),
+    AVG_POWER = mean(POWER, na.rm = TRUE),
+    MOST_COMMON_TYPE = mode(TYPE)
+  )
+
+# Step 2: Join the original DataFrame with the average values based on MODEL_SUBMODEL and MANUFACTURED_YEAR
+resale_cars_df <- resale_cars_df |>
+  left_join(average_values, by = c("MODEL_SUBMODEL", "MANUFACTURED_YEAR"))
+
+# Step 3: Replace missing values with the corresponding average values
+resale_cars_df <- resale_cars_df |>
+  mutate(
+    CURB_WEIGHT_KG = ifelse(is.na(CURB_WEIGHT_KG), AVG_CURB_WEIGHT_KG, CURB_WEIGHT_KG),
+    ENGINE_CAPACITY_CC = ifelse(is.na(ENGINE_CAPACITY_CC), AVG_ENGINE_CAPACITY_CC, ENGINE_CAPACITY_CC),
+    POWER = ifelse(is.na(POWER), AVG_POWER, POWER),
+    TYPE = ifelse(is.na(TYPE), MOST_COMMON_TYPE, TYPE)
+  ) |>
+  select(-AVG_CURB_WEIGHT_KG, -AVG_ENGINE_CAPACITY_CC, -AVG_POWER, -MOST_COMMON_TYPE)  # Remove the temporary columns
+```
+
+
+STEP 7: GET FEATURE_COUNT & ACCESSORIES_COUNT COLUMN FROM FEATURES TEXT & ACCESSORIES TEXT
+
+```{r}
+#minus 1 because all of them end with "see specifications" as the last substring, which is not a feature.
+resale_cars_df <- resale_cars_df |> mutate(FEATURE_COUNT = size(split(FEATURES, '[.,]'))-1, 
+                         ACCESSORIES_COUNT = size(split(ACCESSORIES, '[.,]'))
+                         ) |>
+  select(-FEATURES,-ACCESSORIES)
+```
+
+
+STEP 8: GET AGE COLUMNS FROM DATE COLUMNS [MANUFACTURED_YEAR & REG_DATE]
+
+```{r}
+resale_cars_df <- resale_cars_df |> mutate(AGE_SINCE_MANUFACTURED = as.numeric(2023 - MANUFACTURED_YEAR),
+                         DAYS_SINCE_REGISTERED = as.numeric(datediff(to_date("14-Nov-2023", "dd-MMM-yyyy"), to_date(REG_DATE, "dd-MMM-yyyy")))) |>
+  select(-MANUFACTURED_YEAR, -REG_DATE)
+```
+
+
+STEP 9: CHANGE "MORE THAN 6" IN NUM_PAST_OWNERS TO 7 AND CHANGE COLUMN TYPE TO INTEGER
+
+```{r}
+#change the character string "More than 6" in num_past_owners to 7 and make the column into integer type
+resale_cars_df <- resale_cars_df |> mutate(NUM_PAST_OWNERS = ifelse(NUM_PAST_OWNERS == "More than 6", 7, NUM_PAST_OWNERS)) |>
+  mutate(NUM_PAST_OWNERS = as.integer(NUM_PAST_OWNERS))
+```
+
+
+
+STEP 10: OMIT ROWS WITH NA VALUES
+
+```{r}
+## next we remove all rows with any missing values
+resale_cars_df <- na.omit(resale_cars_df)
+```
+
+
+STEP 11: WRITE AS CSV & PARQUET FILES
+
+```{r}
+resale_cars_df
+```
+
+```{r}
+## save the final dataset as a csv
+write.csv(resale_cars_df, "cleaned_resalecars.csv", row.names=FALSE)
+
+## we also save a parquet file
+spark_write_parquet(resale_cars_df, 'cleaned_resalecars.parquet', mode = "overwrite")
+```
+
+----------END OF DATA CLEANING----------
+
+
+----------START OF DATA VISUALISATION----------
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(dbplot)
+library(corrplot)
+library(corrr)
+```
+
+```{r}
+df <- spark_read_parquet(sc, "cleaned_resalecars.parquet")
+```
+
+```{r}
+# Correlation matrix w/ all numerical vars:
+
+df_numeric <- df |>
+  select(PRICE, MILEAGE_KM, DEPRE_VAL, DEREG_VAL, ROAD_TAX, COE_LISTED, ENGINE_CAPACITY_CC, CURB_WEIGHT_KG, OMV, ARF, POWER, NUM_PAST_OWNERS, DAYS_OF_COE_LEFT, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, DAYS_SINCE_REGISTERED) |>
+  collect()
+
+glimpse(df_numeric)
+
+corrplot(cor(df_numeric), method = "color", type = "lower", tl.cex = 0.5, tl.col = "black", tl.srt = 45, addCoef.col = "black", number.cex = 0.4)
+```
+
+```{r}
+# Correlation matrix w/ the final numerical variables + check for more correlation (< 0.9) between variables (none)
+
+df_second <- df_numeric |>
+  select(PRICE, MILEAGE_KM, CURB_WEIGHT_KG, OMV, NUM_PAST_OWNERS, COE_LISTED, ENGINE_CAPACITY_CC, DAYS_OF_COE_LEFT, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, DAYS_SINCE_REGISTERED)
+
+glimpse(df_second)
+
+corrplot(cor(df_second), method = "color", type = "lower", tl.cex = 0.5, tl.col = "black", tl.srt = 45, addCoef.col = "black", number.cex = 0.6)
+
+```
+
+```{r}
+df_chr <- df |>
+  select(PRICE, TYPE, TRANSMISSION, BRAND_CATEGORY) |>
+  collect()
+
+glimpse(df_chr)
+
+# BAR PLOTS
+
+# PRICE against BRAND CATEGORY
+ggplot(df_chr, aes(x = BRAND_CATEGORY, y = PRICE)) +
+  geom_bar(fill = "orange", stat = "summary", fun = "mean") +
+  labs(x = "Category of Car Brands", y = "Average Price in Thousands") +
+  scale_y_continuous(breaks = seq(0, 2000000, by = 100000),
+                     labels = scales::comma_format(scale = 1e-3))
+
+# PRICE against TYPE
+ggplot(df_chr, aes(x = TYPE, y = PRICE)) +
+  geom_bar(fill = "orange", stat = "summary", fun = "mean") +
+  labs(x = "Car Types", y = "Average Price in Thousands") +
+  scale_y_continuous(breaks = seq(0, 2000000, by = 100000),
+                     labels = scales::comma_format(scale = 1e-3))
+
+# PRICE against TRANSMISSION
+ggplot(df_chr, aes(x = TRANSMISSION, y = PRICE)) +
+  geom_bar(fill = "orange", stat = "summary", fun = "mean") +
+  labs(x = "Car Transmission", y = "Average Price in Thousands")
+```
+
+```{r}
+# RASTER PLOTS
+
+# PRICE against MILEAGE_KM
+df_second |>
+  dbplot_raster(x = MILEAGE_KM, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Mileage in Thousands Kilometre", 
+                     breaks = seq(0, 2000000, by = 100000),
+                     labels = scales::comma_format(scale = 1e-3)) +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against NUM_PAST_OWNERS
+df_second |>
+  dbplot_raster(x = NUM_PAST_OWNERS, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Number of Owners") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against OMV
+df_second |>
+  dbplot_raster(x = OMV, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Open Market Value in Thousands", 
+                     breaks = seq(0, 2000000, by = 100000),
+                     labels = scales::comma_format(scale = 1e-3)) +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against COE_LISTED
+df_second |>
+  dbplot_raster(x = COE_LISTED, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("COE Listed") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against ENGINE_CAPACITY_CC
+df_second |>
+  dbplot_raster(x = ENGINE_CAPACITY_CC, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Engine Capacity") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against CURB_WEIGHT_KG
+df_second |>
+  dbplot_raster(x = CURB_WEIGHT_KG, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Curb Weight in Kilograms") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against DAYS_OF_COE_LEFT
+df_second |>
+  dbplot_raster(x = DAYS_OF_COE_LEFT, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Days of COE Left") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against FEATURE_COUNT
+df_second |>
+  dbplot_raster(x = FEATURE_COUNT, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Number of Features") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against ACCESSORIES_COUNT
+df_second |>
+  dbplot_raster(x = ACCESSORIES_COUNT, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Number of Accessories") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against AGE_SINCE_MANUFACTURED
+df_second |>
+  dbplot_raster(x = AGE_SINCE_MANUFACTURED, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Car's age since manufactured") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+
+# PRICE against DAYS_SINCE_REGISTERED
+df_second |>
+  dbplot_raster(x = DAYS_SINCE_REGISTERED, y = PRICE, fill = n(), resolution = 10) +
+  scale_x_continuous("Number of days since car is registered") +
+  scale_y_continuous("Price in Millions",
+                     breaks = seq(0, 3000000, by = 500000),
+                     labels = scales::comma_format(scale = 1e-6))
+```
+
+```{r}
+# Final dataset with confirmed predictors: 11 numerical + 3 categorical
+
+df_final <- df |>
+  select(PRICE, TYPE, TRANSMISSION, COE_LISTED, NUM_PAST_OWNERS, BRAND_CATEGORY, MILEAGE_KM, CURB_WEIGHT_KG, OMV, ENGINE_CAPACITY_CC, DAYS_OF_COE_LEFT, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, DAYS_SINCE_REGISTERED)
+```
+
+----------END OF DATA VISUALISATION----------
+
+
+
+----------START OF DATA ANALYSIS----------
+
+```{r}
+#read parquet file as df
+df_parquet <- spark_read_parquet(sc, "cleaned_resalecars.parquet")
+```
+
+```{r}
+pipeline <- ml_pipeline(sc) |>
+  ft_vector_assembler(
+    input_cols = c("MILEAGE_KM", "CURB_WEIGHT_KG", "OMV", "COE_LISTED", "ENGINE_CAPACITY_CC", "AGE_SINCE_MANUFACTURED", "DAYS_SINCE_REGISTERED", "NUM_PAST_OWNERS", "DAYS_OF_COE_LEFT", "FEATURE_COUNT", "ACCESSORIES_COUNT"),
+    output_col = "features"
+  ) |>
+  ft_standard_scaler(
+    input_col = "features", 
+    output_col = "features_scaled", 
+    with_mean = TRUE
+  ) |>
+  ft_string_indexer(
+    input_col = "TYPE", 
+    output_col = "TYPE_index"
+  ) |>
+  ft_string_indexer(
+    input_col = "TRANSMISSION", 
+    output_col = "TRANSMISSION_index"
+  ) |>
+  ft_string_indexer(
+    input_col = "BRAND_CATEGORY", 
+    output_col = "BRAND_CATEGORY_index"
+  ) |>
+  ft_vector_assembler(
+    input_cols = c("features_scaled", "TYPE_index", "TRANSMISSION_index", "BRAND_CATEGORY_index"), 
+    output_col = "final_features"
+  ) |>
+  ml_linear_regression(
+    features_col = "final_features",
+    label_col = "PRICE"
+  ) 
+
+pipeline 
+```
+
+```{r}
+#Cross validation: Split data into train and test sets
+df_split <- df_parquet |>
+  sdf_random_split(training = 0.8, testing = 0.2, seed = 1234)
+
+df_train <- df_split$training
+df_test <- df_split$testing
+```
+
+```{r}
+#Fitting pipeline to model 
+pipeline_model <- ml_fit(pipeline, df_train)  
+pipeline_model
+```
+
+```{r}
+# Get the linear regression model from the fitted pipeline 
+lr_model <- pipeline_model$stages[[length(pipeline_model$stages)]]  
+# Access the coefficients of the linear regression model 
+coefficients <- coefficients(lr_model)
+coefficients
+```
+
+```{r}
+#Cross validate pipeline_model
+cv <- ml_cross_validator(
+  sc,
+  estimator = pipeline,
+  estimator_param_maps = list(
+    linear_regression = list(
+      elastic_net_param = c(0,1),
+      reg_param = c(0.1, 0.005, 0.001)
+    )
+  ),
+  evaluator = ml_regression_evaluator(
+    sc,
+    label_col = "PRICE"
+  ),
+  num_folds = 10,
+  parallelism = 1,
+  seed = 123
+)
+cv
+```
+
+```{r}
+#Validating best model.
+cv_model <- ml_fit(cv, df_train) 
+
+cv_model$best_model
+
+ml_validation_metrics(cv_model) |>
+  arrange(rmse)
+
+cv_predict <- ml_predict(cv_model$best_model, df_test)
+```
+
+```{r}
+#calculate mse for our prediction model  
+RMSE_1 <- ml_regression_evaluator(
+  cv_predict,
+  label_col = "PRICE",
+  prediction_col = "prediction",
+  metric_name = "rmse"
+)
+
+RMSE_1
+
+#test for highest adj r^2
+rsquared <- ml_regression_evaluator(
+  cv_predict,
+  label_col = "PRICE",
+  prediction_col = "prediction",
+  metric_name = "r2"
+)
+rsquared
+```
+
+```{r}
+#save pipeline 
+ml_save(pipeline, path = "spark_pipeline_cars", overwrite = TRUE)
+
+#load pipeline 
+pipeline <- ml_load(sc, path = "spark_pipeline_cars")
+```
+
+```{r}
+spark_disconnect(sc)
+```
+
+----------END OF DATA ANALYSIS----------
+
+----------START OF PLUMBER-----------
+
+```{r}
+library(plumber)
+```
+
+```{r}
+# Run plumber
+plumb(file = "final-spark-plumber-cars.R") |>
+  pr_run(port = 8000)
+```
+
+----------END OF PLUMBER-----------

@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Sun Nov 19 20:04:47 SGT 2023:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-018b-e778-10fc-000005290200 
+on database directory memory:/Users/gloriagoh/Desktop/BIG DATA/Group proj/databaseName=metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5ffd2b27 
+Loaded from file:/Users/gloriagoh/spark/spark-3.4.0-bin-hadoop3/jars/derby-10.14.2.0.jar
+java.vendor=Amazon.com Inc.
+java.runtime.version=17.0.8.1+8-LTS
+user.dir=/Users/gloriagoh/Desktop/BIG DATA/Group proj
+os.name=Mac OS X
+os.arch=x86_64
+os.version=13.6.1
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
