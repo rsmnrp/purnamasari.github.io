@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Qistina’s Portfolio",
+    "section": "",
+    "text": "Hello!"
+  },
+  {
+    "objectID": "project_bigdata.html",
+    "href": "project_bigdata.html",
+    "title": "Big Data Project",
+    "section": "",
+    "text": "Predicting the price of resale cars in Singapore\nThis project aims to provide valuable insights to both sellers & buyers in the used car market."
+  },
+  {
+    "objectID": "project_2.html",
+    "href": "project_2.html",
+    "title": "Project 2",
+    "section": "",
+    "text": "This study aims to investigate the effect of diet on early growth of chicks.\nThe first three observations of dataset:\n\nhead(ChickWeight, 3)\n\n  weight Time Chick Diet\n1     42    0     1    1\n2     51    2     1    1\n3     59    4     1    1\n\n\nNumber of rows and columns:\n\ndim(ChickWeight)\n\n[1] 578   4\n\n\nCheck for missing values:\n\nsum(is.na(ChickWeight))\n\n[1] 0"
+  },
+  {
+    "objectID": "project_2.html#weight-v-age-of-chicks-on-different-diets",
+    "href": "project_2.html#weight-v-age-of-chicks-on-different-diets",
+    "title": "Project 2",
+    "section": "",
+    "text": "This study aims to investigate the effect of diet on early growth of chicks.\nThe first three observations of dataset:\n\nhead(ChickWeight, 3)\n\n  weight Time Chick Diet\n1     42    0     1    1\n2     51    2     1    1\n3     59    4     1    1\n\n\nNumber of rows and columns:\n\ndim(ChickWeight)\n\n[1] 578   4\n\n\nCheck for missing values:\n\nsum(is.na(ChickWeight))\n\n[1] 0"
+  },
+  {
+    "objectID": "project_1.html",
+    "href": "project_1.html",
+    "title": "Project 1",
+    "section": "",
+    "text": "The response is the length of odontoblasts in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1 and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC).\nThe first 3 observations of the dataset:\n\nhead(ToothGrowth, 3)\n\n   len supp dose\n1  4.2   VC  0.5\n2 11.5   VC  0.5\n3  7.3   VC  0.5\n\n\nA box plot:\n\nlibrary(tidyverse)\n\nToothGrowth |&gt;\n  mutate(dose = as.factor(dose)) |&gt;\n  ggplot(aes(x = dose, y = len, fill = dose)) +\n  geom_boxplot()"
+  },
+  {
+    "objectID": "project_1.html#the-effect-of-vitamin-c-on-tooth-growth-in-guinea-pigs",
+    "href": "project_1.html#the-effect-of-vitamin-c-on-tooth-growth-in-guinea-pigs",
+    "title": "Project 1",
+    "section": "",
+    "text": "The response is the length of odontoblasts in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1 and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC).\nThe first 3 observations of the dataset:\n\nhead(ToothGrowth, 3)\n\n   len supp dose\n1  4.2   VC  0.5\n2 11.5   VC  0.5\n3  7.3   VC  0.5\n\n\nA box plot:\n\nlibrary(tidyverse)\n\nToothGrowth |&gt;\n  mutate(dose = as.factor(dose)) |&gt;\n  ggplot(aes(x = dose, y = len, fill = dose)) +\n  geom_boxplot()"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "Penultimate student in the Singapore Management University studying Economics and Data Science & Analytics. Here is a portfolio of the data science projects I have done so far."
+  }
+]
