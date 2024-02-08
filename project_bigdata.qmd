@@ -1,0 +1,117 @@
+---
+title: "Big Data Project"
+---
+
+# Introduction
+
+For our big data project, my group and I analysed the used car market dynamics in Singapore by looking at the factors that affect the price of a used car and their significance.
+
+# Web Scraping
+
+We collected our dataset by web-scraping from sgCarMart's website. This is to obtain the latest information of the car market, ensuring that we maintain control over data quality and the dataset's reliability.
+
+# Data Transformation & Wrangling
+
+We proceed to data transformations and wrangling to clean our current data, making sure that most the variables in our dataset could be of use to us instead of just eliminating them.
+
+First, we removed irrelevant variables such as index and CATEGORIES as they do not provide any new information that other columns were not already providing.
+
+Secondly, we created new variables from existing columns. We saw that there were \>50 unique brands and some of them only had 1-2 observations. Thus, we created BRAND_CATEGORY from columns BRAND and MODEL_SUBMODEL, grouping these observations into categories such as Exotic, Luxury and Budget brands. This helps us in ensuring that the data is representative of the types of brand.
+
+We also created variables DAYS_OF_COE_LEFT, FEATURE_COUNT, AGE_SINCE_MANUFACTURED, ACCESSORIES_COUNT, DAYS_SINCE_REGISTERED and NUM_PAST_OWNERS to utilise the existing columns better.
+
+Finally, we converted our final dataframe to a parquet file, to increase the optimisation of working with big data.
+
+# Data Visualisation & Exploratory Data Analysis
+
+Afterwards, I carried out data visualisations & exploratory data analysis. Plotting a correlation matrix between the numerical variables, I saw that variables ARF and OMV, variables ROAD_TAX, POWER and ENGINE_CAPACITY_CC have a high correlation.
+
+![](FIRSTPLOT.png)
+
+With this, we dropped a few variables:
+
+1.  ARF as it is derived from OMV
+2.  ROAD_TAX and POWER as they are functions of ENGINE_CAPACITY_CC
+3.  DEPRE_VAL and DEREG_VAL as they are derived from OMV
+4.  DESCRIPTION as we did not extract any data from it for our model
+5.  BRAND as we have already created BRAND_CATEGORY
+6.  MODEL_SUBMODEL as we have existing columns that have sufficient information
+
+## Final Dataset Features
+
+1.  CURB_WEIGHT_KG
+2.  OMV
+3.  COE_LISTED:
+4.  ENGINE_CAPACITY_CC
+5.  DAYS_OF_COE_LEFT
+6.  MILEAGE_KM
+7.  FEATURE_COUNT
+8.  ACCESSORIES_COUNT
+9.  AGE_SINCE_MANUFACTURED
+10. NO_OF_OWNERS
+11. DAYS_SINCE_REGISTERED
+12. TYPE
+13. TRANSMISSION
+14. BRAND_CATEGORY
+
+We then plot correlation plots, raster plots and bar plots with the final variables.
+
+## Correlation Plots Between Final Variables
+
+We see that variables CURB_WEIGHT_KG, OMV, COE_LISTED, ENGINE_CAPACITY_CC, DAYS_OF_COE_LEFT have a positive relationship with PRICE while variables MILEAGE_KM, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, NO_OF_OWNERS and DAYS_SINCE_REGISTERED have a negative relationship with PRICE.
+
+![](SECOND.png)
+
+## Raster Plots for numerical variables
+
+![](third.png)
+
+![](4.png)
+
+![](5.png)
+
+![](6.png)
+
+![](7.png)
+
+![](8.png)
+
+![](9.png)
+
+![](10.png)
+
+![](11.png)
+
+![](12.png)
+
+![](13.png)
+
+## Bar Plots for character variables
+
+![](14.png)
+
+![](16.png)
+
+![](444.png)
+
+# Modelling
+
+Building a pipeline model, we initialised an empty pipeline ml_pipeline() and used functions ft_vector_assembler(), ft_standard_scaler(), ft_string_indexer() and ml_linear_regression() to combine our variables, standardising them, convert the strings value to index and combine all the variables again into a single row vector to apply linear regression.
+
+### Splitting into training & testing set
+
+We then split our dataset into a training and testing set. To make the split reproducible, we included the seed argument.
+
+Using the ml_fit() function, we convert our earlier pipeline, an estimator object, to a transformer.
+
+### Cross-Validation
+
+We tried out different model specifications by defining a cross-validator, by setting elastic_net_param to a vector of values 0 and 1 to evaluate the Ridge and Lasso models with lambda values 0.1, 0.005 and 0.001 and setting number of folds to 10 to carry out a 10-fold cross validation.
+
+We utilised ml_fit() once again to fit our model with df_train and ml_predict() to select the best model. Our best model is
+
+PRICE = 13975.081**(MILEAGE_KM)** + 2263.033**(CURB_WEIGHT_KG)** + 185926.974**(OMV)** + 728.829**(COE_LISTED)** - 16574.058**(ENGINE_CAPACITY_CC)** -99.682**(AGE_SINCE_MANUFACTURED)** - 52920.730**(DAYS_SINCE_REGISTERED)** -9742.942**(NUM_PAST_OWNERS)** + 26257.671**(DAYS_OF_COE_LEFT)** -2353.743**(FEATURE_COUNT)** - 1024.575**(ACCESSORIES_COUNT)** + 2940.832**(TYPE_index)** + 92549.120**(TRANSMISSION_index)** - 5267.821**(BRAND_CATEGORY_index)** with an RSME of 78359.33 and an R\^2 of 0.789.
+
+# Conclusion
+
+I have detailed how our model can present potential car owners with tools and visualisations to make well-informed choices should they want to purchase a resale car. Users will better understand how resale car prices vary with respect to the different predictors. To ensure our model is publicly available for those who need it, we have published the repository at [this link](https://github.com/kowsiii/bigdata-resalecaresinSG).
