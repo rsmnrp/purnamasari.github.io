@@ -90,14 +90,6 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Big Data Project</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./project_1.html" rel="" target="">
- <span class="menu-text">Project 1</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./project_2.html" rel="" target="">
- <span class="menu-text">Project 2</span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link" href="./about.html" rel="" target="">
  <span class="menu-text">About</span></a>
   </li>  
@@ -117,7 +109,22 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#predicting-the-price-of-resale-cars-in-singapore" id="toc-predicting-the-price-of-resale-cars-in-singapore" class="nav-link active" data-scroll-target="#predicting-the-price-of-resale-cars-in-singapore">Predicting the price of resale cars in Singapore</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#web-scraping" id="toc-web-scraping" class="nav-link" data-scroll-target="#web-scraping">Web Scraping</a></li>
+  <li><a href="#data-transformation-wrangling" id="toc-data-transformation-wrangling" class="nav-link" data-scroll-target="#data-transformation-wrangling">Data Transformation &amp; Wrangling</a></li>
+  <li><a href="#data-visualisation-exploratory-data-analysis" id="toc-data-visualisation-exploratory-data-analysis" class="nav-link" data-scroll-target="#data-visualisation-exploratory-data-analysis">Data Visualisation &amp; Exploratory Data Analysis</a>
+  <ul class="collapse">
+  <li><a href="#final-dataset-features" id="toc-final-dataset-features" class="nav-link" data-scroll-target="#final-dataset-features">Final Dataset Features</a></li>
+  <li><a href="#correlation-plots-between-final-variables" id="toc-correlation-plots-between-final-variables" class="nav-link" data-scroll-target="#correlation-plots-between-final-variables">Correlation Plots Between Final Variables</a></li>
+  <li><a href="#raster-plots-for-numerical-variables" id="toc-raster-plots-for-numerical-variables" class="nav-link" data-scroll-target="#raster-plots-for-numerical-variables">Raster Plots for numerical variables</a></li>
+  <li><a href="#bar-plots-for-character-variables" id="toc-bar-plots-for-character-variables" class="nav-link" data-scroll-target="#bar-plots-for-character-variables">Bar Plots for character variables</a></li>
+  </ul></li>
+  <li><a href="#modelling" id="toc-modelling" class="nav-link" data-scroll-target="#modelling">Modelling</a>
+  <ul class="collapse">
+  <li><a href="#splitting-into-training-testing-set" id="toc-splitting-into-training-testing-set" class="nav-link" data-scroll-target="#splitting-into-training-testing-set">Splitting into training &amp; testing set</a></li>
+  <li><a href="#cross-validation" id="toc-cross-validation" class="nav-link" data-scroll-target="#cross-validation">Cross-Validation</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
   </ul>
 </nav>
     </div>
@@ -141,9 +148,99 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<section id="predicting-the-price-of-resale-cars-in-singapore" class="level1">
-<h1>Predicting the price of resale cars in Singapore</h1>
-<p>This project aims to provide valuable insights to both sellers &amp; buyers in the used car market.</p>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>For our big data project, my group and I analysed the used car market dynamics in Singapore by looking at the factors that affect the price of a used car and their significance.</p>
+</section>
+<section id="web-scraping" class="level1">
+<h1>Web Scraping</h1>
+<p>We collected our dataset by web-scraping from sgCarMart’s website. This is to obtain the latest information of the car market, ensuring that we maintain control over data quality and the dataset’s reliability.</p>
+</section>
+<section id="data-transformation-wrangling" class="level1">
+<h1>Data Transformation &amp; Wrangling</h1>
+<p>We proceed to data transformations and wrangling to clean our current data, making sure that most the variables in our dataset could be of use to us instead of just eliminating them.</p>
+<p>First, we removed irrelevant variables such as index and CATEGORIES as they do not provide any new information that other columns were not already providing.</p>
+<p>Secondly, we created new variables from existing columns. We saw that there were &gt;50 unique brands and some of them only had 1-2 observations. Thus, we created BRAND_CATEGORY from columns BRAND and MODEL_SUBMODEL, grouping these observations into categories such as Exotic, Luxury and Budget brands. This helps us in ensuring that the data is representative of the types of brand.</p>
+<p>We also created variables DAYS_OF_COE_LEFT, FEATURE_COUNT, AGE_SINCE_MANUFACTURED, ACCESSORIES_COUNT, DAYS_SINCE_REGISTERED and NUM_PAST_OWNERS to utilise the existing columns better.</p>
+<p>Finally, we converted our final dataframe to a parquet file, to increase the optimisation of working with big data.</p>
+</section>
+<section id="data-visualisation-exploratory-data-analysis" class="level1">
+<h1>Data Visualisation &amp; Exploratory Data Analysis</h1>
+<p>Afterwards, I carried out data visualisations &amp; exploratory data analysis. Plotting a correlation matrix between the numerical variables, I saw that variables ARF and OMV, variables ROAD_TAX, POWER and ENGINE_CAPACITY_CC have a high correlation.</p>
+<p><img src="FIRSTPLOT.png" class="img-fluid"></p>
+<p>With this, we dropped a few variables:</p>
+<ol type="1">
+<li>ARF as it is derived from OMV</li>
+<li>ROAD_TAX and POWER as they are functions of ENGINE_CAPACITY_CC</li>
+<li>DEPRE_VAL and DEREG_VAL as they are derived from OMV</li>
+<li>DESCRIPTION as we did not extract any data from it for our model</li>
+<li>BRAND as we have already created BRAND_CATEGORY</li>
+<li>MODEL_SUBMODEL as we have existing columns that have sufficient information</li>
+</ol>
+<section id="final-dataset-features" class="level2">
+<h2 class="anchored" data-anchor-id="final-dataset-features">Final Dataset Features</h2>
+<ol type="1">
+<li>CURB_WEIGHT_KG</li>
+<li>OMV</li>
+<li>COE_LISTED:</li>
+<li>ENGINE_CAPACITY_CC</li>
+<li>DAYS_OF_COE_LEFT</li>
+<li>MILEAGE_KM</li>
+<li>FEATURE_COUNT</li>
+<li>ACCESSORIES_COUNT</li>
+<li>AGE_SINCE_MANUFACTURED</li>
+<li>NO_OF_OWNERS</li>
+<li>DAYS_SINCE_REGISTERED</li>
+<li>TYPE</li>
+<li>TRANSMISSION</li>
+<li>BRAND_CATEGORY</li>
+</ol>
+<p>We then plot correlation plots, raster plots and bar plots with the final variables.</p>
+</section>
+<section id="correlation-plots-between-final-variables" class="level2">
+<h2 class="anchored" data-anchor-id="correlation-plots-between-final-variables">Correlation Plots Between Final Variables</h2>
+<p>We see that variables CURB_WEIGHT_KG, OMV, COE_LISTED, ENGINE_CAPACITY_CC, DAYS_OF_COE_LEFT have a positive relationship with PRICE while variables MILEAGE_KM, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, NO_OF_OWNERS and DAYS_SINCE_REGISTERED have a negative relationship with PRICE.</p>
+<p><img src="SECOND.png" class="img-fluid"></p>
+</section>
+<section id="raster-plots-for-numerical-variables" class="level2">
+<h2 class="anchored" data-anchor-id="raster-plots-for-numerical-variables">Raster Plots for numerical variables</h2>
+<p><img src="third.png" class="img-fluid"></p>
+<p><img src="4.png" class="img-fluid"></p>
+<p><img src="5.png" class="img-fluid"></p>
+<p><img src="6.png" class="img-fluid"></p>
+<p><img src="7.png" class="img-fluid"></p>
+<p><img src="8.png" class="img-fluid"></p>
+<p><img src="9.png" class="img-fluid"></p>
+<p><img src="10.png" class="img-fluid"></p>
+<p><img src="11.png" class="img-fluid"></p>
+<p><img src="12.png" class="img-fluid"></p>
+<p><img src="13.png" class="img-fluid"></p>
+</section>
+<section id="bar-plots-for-character-variables" class="level2">
+<h2 class="anchored" data-anchor-id="bar-plots-for-character-variables">Bar Plots for character variables</h2>
+<p><img src="14.png" class="img-fluid"></p>
+<p><img src="16.png" class="img-fluid"></p>
+<p><img src="444.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="modelling" class="level1">
+<h1>Modelling</h1>
+<p>Building a pipeline model, we initialised an empty pipeline ml_pipeline() and used functions ft_vector_assembler(), ft_standard_scaler(), ft_string_indexer() and ml_linear_regression() to combine our variables, standardising them, convert the strings value to index and combine all the variables again into a single row vector to apply linear regression.</p>
+<section id="splitting-into-training-testing-set" class="level3">
+<h3 class="anchored" data-anchor-id="splitting-into-training-testing-set">Splitting into training &amp; testing set</h3>
+<p>We then split our dataset into a training and testing set. To make the split reproducible, we included the seed argument.</p>
+<p>Using the ml_fit() function, we convert our earlier pipeline, an estimator object, to a transformer.</p>
+</section>
+<section id="cross-validation" class="level3">
+<h3 class="anchored" data-anchor-id="cross-validation">Cross-Validation</h3>
+<p>We tried out different model specifications by defining a cross-validator, by setting elastic_net_param to a vector of values 0 and 1 to evaluate the Ridge and Lasso models with lambda values 0.1, 0.005 and 0.001 and setting number of folds to 10 to carry out a 10-fold cross validation.</p>
+<p>We utilised ml_fit() once again to fit our model with df_train and ml_predict() to select the best model. Our best model is</p>
+<p>PRICE = 13975.081<strong>(MILEAGE_KM)</strong> + 2263.033<strong>(CURB_WEIGHT_KG)</strong> + 185926.974<strong>(OMV)</strong> + 728.829<strong>(COE_LISTED)</strong> - 16574.058<strong>(ENGINE_CAPACITY_CC)</strong> -99.682<strong>(AGE_SINCE_MANUFACTURED)</strong> - 52920.730<strong>(DAYS_SINCE_REGISTERED)</strong> -9742.942<strong>(NUM_PAST_OWNERS)</strong> + 26257.671<strong>(DAYS_OF_COE_LEFT)</strong> -2353.743<strong>(FEATURE_COUNT)</strong> - 1024.575<strong>(ACCESSORIES_COUNT)</strong> + 2940.832<strong>(TYPE_index)</strong> + 92549.120<strong>(TRANSMISSION_index)</strong> - 5267.821<strong>(BRAND_CATEGORY_index)</strong> with an RSME of 78359.33 and an R^2 of 0.789.</p>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>I have detailed how our model can present potential car owners with tools and visualisations to make well-informed choices should they want to purchase a resale car. Users will better understand how resale car prices vary with respect to the different predictors. To ensure our model is publicly available for those who need it, we have published the repository at <a href="https://github.com/kowsiii/bigdata-resalecaresinSG">this link</a>.</p>
 
 
 </section>
