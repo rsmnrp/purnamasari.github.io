@@ -26,7 +26,7 @@ Finally, we converted our final dataframe to a parquet file, to increase the opt
 
 Afterwards, I carried out data visualisations & exploratory data analysis. Plotting a correlation matrix between the numerical variables, I saw that variables ARF and OMV, variables ROAD_TAX, POWER and ENGINE_CAPACITY_CC have a high correlation.
 
-![Correlation Matrix Between Numerical Variables](FIRSTPLOT.png)
+![](FIRSTPLOT.png)
 
 With this, we dropped a few variables:
 
@@ -60,39 +60,39 @@ We then plot correlation plots, raster plots and bar plots with the final variab
 
 We see that variables CURB_WEIGHT_KG, OMV, COE_LISTED, ENGINE_CAPACITY_CC, DAYS_OF_COE_LEFT have a positive relationship with PRICE while variables MILEAGE_KM, FEATURE_COUNT, ACCESSORIES_COUNT, AGE_SINCE_MANUFACTURED, NO_OF_OWNERS and DAYS_SINCE_REGISTERED have a negative relationship with PRICE.
 
-![Correlation Matrix Between Final Variables](SECOND.png)
+![](SECOND.png)
 
 ## Raster Plots for numerical variables
 
-![Raster Plot of Price against Mileage](third.png)
+![](third.png)
 
-![Raster Plot of Price against Number of Owners](4.png)
+![](4.png)
 
-![Raster Plot of Price against Open Market Value](5.png)
+![](5.png)
 
-![Raster Plot of Price against CEO Listed](6.png)
+![](6.png)
 
-![Raster Plot of Price against Engine Capacity](7.png)
+![](7.png)
 
-![Raster Plot of Price against Curb Weight](8.png)
+![](8.png)
 
-![Raster Plot of Price against Days of COE left](9.png)
+![](9.png)
 
-![Raster Plot of Price against Number of Features](10.png)
+![](10.png)
 
-![Raster Plot of Price against Number of Accessories](11.png)
+![](11.png)
 
-![Raster Plot of Price against Car's age since manufactured](12.png)
+![](12.png)
 
-![Raster Plot of Price against Number of days since car is registered](13.png)
+![](13.png)
 
 ## Bar Plots for character variables
 
-![Bar Plot of Average Price against Car Brands](14.png)
+![](14.png)
 
-![Bar Plot of Average Price against Car Transmission](16.png)
+![](16.png)
 
-![Bar Plot of Average Price against Car Types](444.png)
+![](444.png)
 
 # Modelling
 
